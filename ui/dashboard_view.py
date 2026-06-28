@@ -1,8 +1,6 @@
 import datetime as dt
-
 import streamlit as st
 from streamlit_js_eval import streamlit_js_eval
-
 from controllers.dashboard_controller import DashboardController
 from models import Studium
 from utils.charts import donut_ects, grade_semi, stacked_progress
@@ -15,11 +13,8 @@ from utils.helpers import (
     parse_grade,
 )
 
-
 class DashboardView:
-    """
-    Kapselt die Benutzerinteraktion und UI-Logik des Dashboards.
-    """
+    """Kapselt die Benutzerinteraktion und UI-Logik des Dashboards."""
 
     def __init__(self, controller: DashboardController):
         self.controller = controller

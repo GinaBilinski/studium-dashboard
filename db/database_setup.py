@@ -2,25 +2,24 @@ from sqlalchemy import create_engine, text, func, exists
 from sqlalchemy.orm import Session, declarative_base
 from pathlib import Path
 
-# --- zentrale DB-Basis ---
 Base = declarative_base()
-
-# --- Engine / Verbindung ---
-DB_PATH = Path("studium.db")
+DB_PATH = Path("studium.db")  # Datenbankdatei im Projektverzeichnis
 engine = create_engine(f"sqlite:///{DB_PATH}", echo=False, future=True)
 
 
 def migrate_schema():
-    """Schema-Migrationen. Wichtig: Models nur lokal importieren (kein Kreisimport!)."""
+    """Erstellt fehlende Tabellen und migriert alte Datenbankstrukturen."""
     from models.modul import Modul
     from models.pruefungsleistung import Pruefungsleistung
 
     Base.metadata.create_all(engine)
     with Session(engine) as s:
+        # Prüfen ob alte Spalten note/bestanden in der Modul-Tabelle existieren
         cols = {c[1] for c in s.execute(text("PRAGMA table_info(modul)")).fetchall()}
         has_note = "note" in cols
         has_bestanden = "bestanden" in cols
         if has_note or has_bestanden:
+            # Alte Daten auslesen und in Pruefungsleistung-Einträge umwandeln
             rows = s.execute(text("SELECT id, COALESCE(bestanden, 0) AS b, note FROM modul")).fetchall()
             for mid, b_alt, note_alt in rows:
                 exists_pl = s.query(
@@ -38,7 +37,7 @@ def migrate_schema():
 
 
 def seed_if_empty():
-    """Initialdaten einfüllen. Models hier lokal importieren."""
+    """Befüllt eine leere Datenbank mit Startwerten für Studium, Semester und Module."""
     from models.studium import Studium
     from models.semester import Semester
     from models.modul import Modul
@@ -47,6 +46,7 @@ def seed_if_empty():
     migrate_schema()
 
     with Session(engine) as s:
+        # Studium anlegen, falls noch keines vorhanden
         if s.query(func.count(Studium.id)).scalar() == 0:
             s.add(Studium(
                 gesamt_ects=180,
@@ -56,10 +56,12 @@ def seed_if_empty():
                 ziel_note=None,
             ))
 
+        # Sechs Semester anlegen, falls noch keine vorhanden
         if s.query(func.count(Semester.id)).scalar() == 0:
             for i in range(1, 7):
                 s.add(Semester(nummer=i))
 
+        # Module des Studiengangs anlegen, falls noch keine vorhanden
         if s.query(func.count(Modul.id)).scalar() == 0:
             demo = [
                 ("Grundlagen der industriellen Softwaretechnik", 5),

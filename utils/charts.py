@@ -10,6 +10,9 @@ RED = "#ff3333"
 
 # Balkendiagramm (ECTS-Fortschritt)
 def stacked_progress(total, ist, soll):
+    """Erstellt einen horizontalen Fortschrittsbalken für den ECTS-Vergleich.
+    Farbe des Balkens: grün wenn Ist >= Soll, gelb bei Rückstand <= 5 ECTS, sonst rot.
+    """
     ist = max(0, min(ist, total))
     soll = max(0, min(soll, total))
     prog_color = GREEN if ist >= soll else (AMBER if (soll - ist) <= 5 else RED)
@@ -27,6 +30,7 @@ def stacked_progress(total, ist, soll):
     ))
     deficit = max(0, soll - ist)
     if deficit > 0:
+        # Soll-Rückstand grau hervorheben
         fig.add_trace(go.Bar(
             x=[deficit], y=[""], base=ist, orientation="h",
             marker=dict(color=GREY_SOLL),
@@ -46,6 +50,7 @@ def stacked_progress(total, ist, soll):
 
 # Donut-Diagramm (ECTS-Gesamtfortschritt)
 def donut_ects(ist, total, soll):
+    """Erstellt ein Donut-Diagramm mit den erreichten ECTS im Verhältnis zum Gesamtziel."""
     ist = max(0, min(ist, total))
     soll = max(0, min(soll, total))
     gap_soll = max(0, soll - ist)
@@ -72,10 +77,14 @@ def donut_ects(ist, total, soll):
 
 # Halbkreisdiagramm (Notenübersicht)
 def grade_semi(avg: float | None, ziel: float | None = None):
+    """Erstellt ein Halbkreisdiagramm mit der aktuellen Durchschnittsnote im Vergleich zur Zielnote.
+    Farbe: grün bei Note <= 1,7, gelb bei <= 2,0, sonst rot.
+    """
     def to_pct(note: float) -> float:
+        # Note in einen Prozentwert umrechnen (1,0 = 100%, 5,0 = 0%)
         return max(0.0, min(1.0, (5.0 - note) / 4.0))
 
-    arc = 0.75
+    arc = 0.75  # Der Bogen umfasst 75% des Kreises
     gap = 1 - arc
     ziel_fill = 0.0 if ziel is None else to_pct(ziel) * arc
     ist_fill = 0.0 if avg is None else to_pct(float(avg)) * arc
@@ -87,6 +96,7 @@ def grade_semi(avg: float | None, ziel: float | None = None):
         ist_color = GREEN if avg <= 1.7 else (AMBER if avg <= 2.0 else RED)
         center = f"<b>{format_note(avg)}</b><br>Ø-Note"
 
+    # Hintergrundebene zeigt die Zielnote
     base = go.Pie(
         values=[ziel_fill, max(0.0, arc - ziel_fill), gap],
         hole=0.70, rotation=225, sort=False, direction="clockwise",
@@ -94,6 +104,7 @@ def grade_semi(avg: float | None, ziel: float | None = None):
         textinfo="none", hoverinfo="skip", showlegend=False
     )
 
+    # Vordergrundebene zeigt die aktuelle Durchschnittsnote
     overlay = go.Pie(
         values=[min(ist_fill, arc), max(0.0, arc - ist_fill), gap],
         hole=0.70, rotation=225, sort=False, direction="clockwise",
